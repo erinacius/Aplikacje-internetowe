@@ -1,0 +1,17 @@
+# system
+.DS_Store
+Thumbs.db
+
+# edytory
+.vscode/
+
+# zaleznosci
+node_modules/
+
+# env i logi
+.env
+*.log
+
+# build
+dist/
+build/
