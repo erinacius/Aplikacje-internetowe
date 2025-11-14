@@ -1,0 +1,196 @@
+/* =============================
+   GLOBAL RESET
+============================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+    background-image: url("kot.jpg");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+h2 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* =============================
+   PERMISSIONS SECTION
+============================= */
+.permissions-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#permissionsStatus {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f0f4f8;
+    border-left: 4px solid #3498db;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+/* =============================
+   MAP SECTION
+============================= */
+.map-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.map-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.map-container {
+    width: 100%;
+    max-width: 800px;
+    height: 500px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    margin: 0 auto 15px;
+    background: #f9f9f9;
+}
+
+#coordsInfo {
+    text-align: center;
+    padding: 10px;
+    background: #f0f4f8;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#mapContainer,
+.leaflet-container {
+    height: 500px !important;
+}
+
+/* =============================
+   PUZZLE SECTION
+============================= */
+.puzzle-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.puzzle-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+    align-items: start;
+}
+
+#board {
+    width: 100%;
+    max-width: 900px;
+    height: 500px;
+    border: 3px dashed #555;
+    position: relative;
+    background: #bdc3c7;
+    border-radius: 4px;
+}
+
+#pieces {
+    width: 100%;
+    max-width: 900px;
+    height: 500px;
+    border: 2px solid #bdc3c7;
+    border-radius: 4px;
+    background: #ecf0f1;
+    padding: 10px;
+    overflow: auto;
+}
+
+.puzzle-piece {
+    display: inline-block;
+    background-size: 100% 100%;
+    cursor: grab;
+    user-select: none;
+    border: 2px solid #7f8c8d;
+    border-radius: 2px;
+    transition: 0.2s;
+}
+
+.puzzle-piece:hover {
+    box-shadow: 0 0 0 3px #f39c12;
+}
+
+.puzzle-piece:active {
+    cursor: grabbing;
+}
+
+#puzzleStatus {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 600;
+}
+
+button {
+    padding: 10px 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+    .puzzle-container {
+        grid-template-columns: 1fr;
+    }
+}

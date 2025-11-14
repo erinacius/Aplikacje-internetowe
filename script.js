@@ -1,284 +1,358 @@
+// ================================
+// GLOBAL VARIABLES
+// ================================
+let map = null;
+let userLocation = null;
+let userMarker = null;
+let currentMapImage = null;
+// Puzzle board references (made global so handlers can access)
+let puzzleBoard = null;
+let puzzlePiecesContainer = null;
+const piecesPerRow = 3; // 3x3 puzzle -> 9 pieces
 
-// klasa todo zarzadza lista zadani wyswielaniem
-class Todo {
-  constructor({ listEl, searchInput, clearSearchBtn, addForm, addErrorEl, taskTextInput, taskDueInput }) {
-    this.listEl = listEl;
-    this.searchInput = searchInput;
-    this.clearSearchBtn = clearSearchBtn;
-    this.addForm = addForm;
-    this.addErrorEl = addErrorEl;
-    this.taskTextInput = taskTextInput;
-    this.taskDueInput = taskDueInput;
+let puzzleState = {
+    started: false,
+    pieces: [],
+    draggedPiece: null
+};
 
-  // klucz do localstorage
-  this.storageKey = 'ai1.labB.todo.v1';
-    this.tasks = [];
-  // term przechowuje fraze wyszukiwawcza wpisana przez uzytkownika
-  this.term = '';
-    this.editingId = null;
+// ================================
+// INIT LEAFLET MAP
+// ================================
+function initMap() {
+    map = L.map('mapContainer').setView([52.2297, 21.0122], 13);
 
-    this.load();
-    this.bindEvents();
-    this.draw();
-  }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
 
-  load() {
-  // wczytuje tablice z localstorage
-    try {
-      const raw = localStorage.getItem(this.storageKey);
-      this.tasks = raw ? JSON.parse(raw) : [];
-    } catch {
-      // w razie bledu ustawia pusta tablice
-      this.tasks = [];
-    }
-  }
-  save() {
-  // zapisuje do localstorage
-    localStorage.setItem(this.storageKey, JSON.stringify(this.tasks));
-  }
+    map.on('mousemove', (e) => {
+        document.getElementById('coordsDisplay').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+    });
+}
 
-  setTerm(t) {
-    this.term = (t || '').trim();
-    this.draw();
-  }
+// ================================
+// PERMISSIONS: LOCATION
+// ================================
+document.getElementById('btnRequestLocation').addEventListener('click', () => {
+    if (!navigator.geolocation) return alert('Geolocation API nie jest obsługiwane.');
 
-  get filtered() {
-  // getter zwraca przefiltrowana tablice zadan
-    const q = this.term.toLowerCase();
-    if (q.length < 2) return this.tasks;
-    return this.tasks.filter(t => t.text.toLowerCase().includes(q));
-  }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            userLocation = {
+                lat: pos.coords.latitude,
+                lon: pos.coords.longitude,
+                accuracy: pos.coords.accuracy
+            };
+            updatePermissionsStatus();
+            // Do not add marker here — this button only requests/stores location permission
+            showNotification('Zgoda pobrana', 'Lokalizacja została pobrana i zapisana. Kliknij "Moja lokalizacja" aby ją pokazać na mapie.');
+        },
+        (err) => alert('Błąd pobierania lokalizacji: ' + err.message)
+    );
+});
 
-  static escapeRegExp(str) {
-    // pomocnicza funccja do znakow specjalnych
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
+function addUserMarker() {
+    if (userMarker) map.removeLayer(userMarker);
 
-  highlight(text) {
-    const q = this.term.trim();
-    if (q.length < 2) return this.escapeHTML(text);
-    const pattern = new RegExp(Todo.escapeRegExp(q), 'gi');
-    return this.escapeHTML(text).replace(pattern, (m) => `<mark>${this.escapeHTML(m)}</mark>`);
-  }
+    userMarker = L.marker([userLocation.lat, userLocation.lon]).addTo(map);
+    map.setView([userLocation.lat, userLocation.lon], 15);
+}
 
-  static isFutureOrEmpty(dueStr) {
-    // sprawdzanie daty
-    if (!dueStr) return true;
-    const due = new Date(dueStr);
-    if (Number.isNaN(due.getTime())) return false;
-    const now = new Date();
-    return due.getTime() > now.getTime();
-  }
+// ================================
+// PERMISSIONS: NOTIFICATIONS
+// ================================
+document.getElementById('btnRequestNotifications').addEventListener('click', () => {
+    if (!('Notification' in window)) return alert('Powiadomienia nie są obsługiwane.');
 
-  validateNew(text, dueStr) {
-    const t = (text || '').trim();
-    if (t.length < 3) return 'tekst zadania musi miec >= 3 znaki.';
-    if (t.length > 255) return 'tekst zadania nie moze przekraczac 255 znakow.';
-    if (!Todo.isFutureOrEmpty(dueStr)) return 'data musi byc pusta albo w przyszlosci.';
-    return '';
-  }
-
-  addTask(text, dueStr) {
-    const err = this.validateNew(text, dueStr);
-    if (err) throw new Error(err);
-
-    const task = {
-      id: crypto.randomUUID(),
-      text: text.trim(),
-      due: dueStr || '', 
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    this.tasks.push(task);
-    this.save();
-    this.draw();
-  }
-
-  removeTask(id) {
-    const i = this.tasks.findIndex(t => t.id === id);
-    if (i >= 0) {
-      this.tasks.splice(i, 1);
-      if (this.editingId === id) this.editingId = null;
-      this.save();
-      this.draw();
-    }
-  }
-
-  updateTask(id, { text, due }) {
-    const t = this.tasks.find(x => x.id === id);
-    if (!t) return;
-    const newText = (text ?? t.text).trim();
-    const newDue = due ?? t.due;
-
-    const err = this.validateNew(newText, newDue);
-    if (err) throw new Error(err);
-
-    t.text = newText;
-    t.due = newDue;
-    t.updatedAt = new Date().toISOString();
-    this.save();
-    this.draw();
-  }
-
-  draw() {
-  // aktualizacja widoku listy po zmianie czegokolwiek
-    const items = this.filtered;
-    this.listEl.innerHTML = '';
-
-    if (items.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.textContent = this.term.length >= 2 ? 'brak wynikow wyszukiwania.' : 'brak zadan. dodaj pierwsze ponizej.';
-      this.listEl.appendChild(empty);
-      return;
-    }
-
-    for (const task of items) {
-      const row = document.createElement('div');
-      row.className = 'item';
-      row.dataset.id = task.id;
-
-      if (this.editingId === task.id) {
-        const editor = document.createElement('div');
-        editor.className = 'editor';
-
-        const inputs = document.createElement('div');
-        inputs.className = 'inputs';
-
-        const txt = document.createElement('input');
-        txt.type = 'text';
-        txt.value = task.text;
-        txt.maxLength = 255;
-        txt.autofocus = true;
-
-        const due = document.createElement('input');
-        due.type = 'datetime-local';
-        if (task.due) {
-          due.value = task.due;
-        }
-
-        inputs.appendChild(txt);
-        inputs.appendChild(due);
-
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn';
-        saveBtn.textContent = 'zapisz';
-
-        editor.appendChild(inputs);
-        editor.appendChild(saveBtn);
-
-        saveBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          try {
-            this.updateTask(task.id, { text: txt.value, due: due.value });
-            this.editingId = null;
-          } catch (err) {
-            alert(err.message);
-          }
+    if (Notification.permission === 'granted') {
+        showNotification('Powiadomienia', 'Powiadomienia już włączone');
+    } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(p => {
+            updatePermissionsStatus();
+            if (p === 'granted') showNotification('Powiadomienia', 'Powiadomienia aktywne!');
         });
+    } else alert('Powiadomienia są zablokowane.');
+});
 
-        const handleOutside = (ev) => {
-          if (row.contains(ev.target)) return;
-          try {
-            this.updateTask(task.id, { text: txt.value, due: due.value });
-          } catch (err) {
-            alert(err.message);
-          } finally {
-            this.editingId = null;
-            document.removeEventListener('mousedown', handleOutside, true);
-          }
+function updatePermissionsStatus() {
+    let status = `<strong>Status uprawnień:</strong><br>`;
+
+    if (userLocation)
+        status += `✓ Lokalizacja: ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}<br>`;
+    else
+        status += `✗ Lokalizacja: brak zgody<br>`;
+
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted')
+            status += '✓ Powiadomienia: włączone';
+        else if (Notification.permission === 'default')
+            status += '? Powiadomienia: nie pytano';
+        else
+            status += '✗ Powiadomienia: zablokowane';
+    }
+
+    document.getElementById('permissionsStatus').innerHTML = status;
+}
+
+function showNotification(title, body) {
+    if (Notification.permission === 'granted') {
+        new Notification(title, { body: body });
+    }
+}
+
+// ================================
+// BUTTON: MY LOCATION (GOOGLE MAPS)
+// ================================
+document.getElementById('btnMyLocation').addEventListener('click', () => {
+    // If location was already requested and saved, just show the marker
+    if (userLocation) {
+        addUserMarker();
+        showNotification('Moja lokalizacja', `Wyświetlam zapisaną pozycję: ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}`);
+        return;
+    }
+
+    if (!navigator.geolocation) return alert('Brak wsparcia dla geolokalizacji.');
+
+    navigator.geolocation.getCurrentPosition((pos) => {
+        // Save location and show on Leaflet map
+        userLocation = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
         };
-        setTimeout(() => {
-          document.addEventListener('mousedown', handleOutside, true);
-        }, 0);
+        updatePermissionsStatus();
+        addUserMarker();
+        showNotification('Moja lokalizacja', 'Pobrano i wyświetlono Twoją pozycję.');
+    }, (err) => {
+        alert('Błąd pobierania lokalizacji: ' + err.message);
+    });
+});
 
-        row.appendChild(editor);
-      } else {
-        const textCol = document.createElement('div');
-        textCol.className = 'text';
-        textCol.innerHTML = this.highlight(task.text);
-        textCol.title = 'kliknij, aby edytowac';
-        textCol.addEventListener('click', () => {
-          this.editingId = task.id;
-          this.draw();
-        });
+function showGoogleMap(lat, lon) {
+    // Google Maps removed — function left empty to avoid errors if referenced elsewhere
+}
 
-        const dueCol = document.createElement('div');
-        dueCol.className = 'due';
-        if (task.due) {
-          const dueDate = new Date(task.due);
-          const isPast = !Number.isNaN(dueDate.getTime()) && dueDate.getTime() <= Date.now();
-          dueCol.textContent = formatDateTime(task.due);
-          if (isPast) dueCol.classList.add('danger');
-        } else {
-          dueCol.textContent = '\u2014';
+// btnCloseGoogleMaps removed along with Google Maps UI
+
+// ================================
+// RESET MAP
+// ================================
+document.getElementById('btnResetMap').addEventListener('click', () => {
+    map.setView([52.2297, 21.0122], 13);
+});
+
+// ================================
+// EXPORT MAP + START PUZZLE
+// ================================
+document.getElementById('btnExportMap').addEventListener('click', () => exportMap());
+async function exportMap() {
+    const canvas = await html2canvas(document.getElementById('mapContainer'));
+    currentMapImage = canvas.toDataURL('image/png');
+
+    const link = document.createElement('a');
+    link.href = currentMapImage;
+    link.download = 'mapa.png';
+    link.click();
+
+    initPuzzle();
+}
+
+// Start puzzle by capturing current Leaflet map and creating 3x3 puzzle
+document.getElementById('btnStartPuzzle').addEventListener('click', async () => {
+    try {
+        const canvas = await html2canvas(document.getElementById('mapContainer'), {useCORS: true});
+        currentMapImage = canvas.toDataURL('image/png');
+        initPuzzle();
+    } catch (err) {
+        console.error('Błąd tworzenia puzzle:', err);
+        alert('Nie udało się przygotować puzzle: ' + err.message);
+    }
+});
+
+// ================================
+// PUZZLE ENGINE
+// ================================
+function initPuzzle() {
+    if (!currentMapImage) return alert('Najpierw pobierz mapę!');
+
+    puzzleState.pieces = [];
+
+    // Use global board/pieces references
+    puzzleBoard = document.getElementById('board');
+    puzzlePiecesContainer = document.getElementById('pieces');
+    puzzleBoard.innerHTML = '';
+    puzzlePiecesContainer.innerHTML = '';
+
+    let img = new Image();
+    img.onload = () => {
+        // create 3x3 puzzle with precise slicing so we don't crop edges
+        const rows = piecesPerRow;
+        const cols = piecesPerRow;
+
+        // floating cell sizes
+        const cellWf = img.width / cols;
+        const cellHf = img.height / rows;
+
+        // compute integer widths/heights per column/row so sum matches image dimensions
+        const colWidths = new Array(cols);
+        const rowHeights = new Array(rows);
+        for (let c = 0; c < cols; c++) {
+            colWidths[c] = Math.round((c + 1) * cellWf) - Math.round(c * cellWf);
+        }
+        for (let r = 0; r < rows; r++) {
+            rowHeights[r] = Math.round((r + 1) * cellHf) - Math.round(r * cellHf);
         }
 
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn';
-        delBtn.textContent = 'usun';
-        delBtn.title = 'usun to zadanie';
-        delBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (confirm('usunac to zadanie?')) this.removeTask(task.id);
+        // set board size to exact image size so drops align
+        puzzleBoard.style.position = 'relative';
+        puzzleBoard.style.width = img.width + 'px';
+        puzzleBoard.style.height = img.height + 'px';
+        puzzleBoard.style.border = '1px dashed rgba(0,0,0,0.2)';
+
+        let temp = [];
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const sx = Math.round(c * cellWf);
+                const sy = Math.round(r * cellHf);
+                const sw = colWidths[c];
+                const sh = rowHeights[r];
+
+                let canvas = document.createElement('canvas');
+                canvas.width = sw;
+                canvas.height = sh;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+                let div = document.createElement('div');
+                div.classList.add('puzzle-piece');
+                div.style.width = sw + 'px';
+                div.style.height = sh + 'px';
+                div.style.backgroundImage = `url(${canvas.toDataURL()})`;
+                div.style.backgroundSize = '100% 100%';
+
+                let piece = { r, c, element: div, placed: false, currentRow: null, currentCol: null };
+
+                div.draggable = true;
+                div.addEventListener('dragstart', () => puzzleState.draggedPiece = piece);
+                div.addEventListener('dragend', () => puzzleState.draggedPiece = null);
+
+                temp.push(piece);
+            }
+        }
+
+        // shuffle
+        temp.sort(() => Math.random() - 0.5);
+
+        // place pieces in pieces container (no absolute positioning needed, flexbox will handle layout)
+        temp.forEach((p) => {
+            // remove inline positioning since CSS flexbox will handle layout
+            p.element.style.position = 'relative';
+            puzzlePiecesContainer.appendChild(p.element);
+            puzzleState.pieces.push(p);
         });
 
-        row.appendChild(textCol);
-        row.appendChild(dueCol);
-        row.appendChild(delBtn);
-      }
+        // make board accept drops, pass column widths and row heights for precise snapping
+        puzzleBoard.ondragover = (e) => e.preventDefault();
+        puzzleBoard.ondrop = (e) => handleDrop(e, colWidths, rowHeights);
+    };
+    img.src = currentMapImage;
+}
 
-      this.listEl.appendChild(row);
+function handleDrop(e, colWidths, rowHeights) {
+    const p = puzzleState.draggedPiece;
+    if (!p) return;
+
+    const rect = puzzleBoard.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // determine column by accumulating widths
+    let cum = 0;
+    let col = -1;
+    for (let c = 0; c < colWidths.length; c++) {
+        cum += colWidths[c];
+        if (x < cum) { col = c; break; }
     }
-  }
 
-  bindEvents() {
-  // poczlaczenie zdarzen do przyciskow
-    this.searchInput.addEventListener('input', () => this.setTerm(this.searchInput.value));
-    this.clearSearchBtn.addEventListener('click', () => {
-      this.searchInput.value = '';
-      this.setTerm('');
-      this.searchInput.focus();
-    });
+    // determine row by accumulating heights
+    cum = 0;
+    let row = -1;
+    for (let r = 0; r < rowHeights.length; r++) {
+        cum += rowHeights[r];
+        if (y < cum) { row = r; break; }
+    }
 
-    this.addForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.addErrorEl.textContent = '';
-      try {
-        this.addTask(this.taskTextInput.value, this.taskDueInput.value);
-        this.taskTextInput.value = '';
-        this.taskDueInput.value = '';
-        this.searchInput.focus();
-      } catch (err) {
-        this.addErrorEl.textContent = err.message;
-      }
-    });
-  }
+    if (col === -1 || row === -1) {
+        showNotification('Poza planszą', 'Upuść część na planszy.');
+        return;
+    }
+
+    // compute position by summing previous widths/heights
+    const left = colWidths.slice(0, col).reduce((a, b) => a + b, 0);
+    const top = rowHeights.slice(0, row).reduce((a, b) => a + b, 0);
+
+    // find if another piece is sitting at target cell
+    const existing = puzzleState.pieces.find(px => px.currentRow === row && px.currentCol === col);
+
+    // remember previous position of dragged piece
+    const prevRow = p.currentRow;
+    const prevCol = p.currentCol;
+
+    // place dragged piece to target
+    p.currentRow = row;
+    p.currentCol = col;
+    p.placed = true;
+    p.element.style.position = 'absolute';
+    p.element.style.left = left + 'px';
+    p.element.style.top = top + 'px';
+    // ensure draggable stays enabled so user can move/swap later
+    p.element.draggable = true;
+    puzzleBoard.appendChild(p.element);
+
+    if (existing && existing !== p) {
+        // swap: move existing piece to dragged piece previous spot (or back to pieces container if none)
+        if (prevRow === null || prevCol === null) {
+            // move existing back to pieces container
+            existing.currentRow = null;
+            existing.currentCol = null;
+            existing.placed = false;
+            // reset positioning and append to pieces container (flexbox will handle layout)
+            existing.element.style.position = 'relative';
+            existing.element.style.left = '';
+            existing.element.style.top = '';
+            puzzlePiecesContainer.appendChild(existing.element);
+        } else {
+            // move existing to previous position of dragged piece
+            const prevLeft = colWidths.slice(0, prevCol).reduce((a, b) => a + b, 0);
+            const prevTop = rowHeights.slice(0, prevRow).reduce((a, b) => a + b, 0);
+            existing.currentRow = prevRow;
+            existing.currentCol = prevCol;
+            existing.placed = true;
+            existing.element.style.position = 'absolute';
+            existing.element.style.left = prevLeft + 'px';
+            existing.element.style.top = prevTop + 'px';
+            puzzleBoard.appendChild(existing.element);
+        }
+    }
+
+    checkPuzzleCompletion();
 }
 
-function formatDateTime(localStr) {
-  try {
-    const d = new Date(localStr);
-    if (Number.isNaN(d.getTime())) return localStr;
-    return d.toLocaleString('pl-PL', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
-    });
-  } catch {
-    return localStr;
-  }
+function checkPuzzleCompletion() {
+    // for 3x3 puzzle ensure all 9 pieces are placed
+    if (puzzleState.pieces.length > 0 && puzzleState.pieces.every(p => p.placed)) {
+        document.getElementById('puzzleStatus').innerHTML = '<p style="color: #27ae60; font-weight: bold; font-size:18px;">🎉 Gratulacje! Ułożyłeś puzzle! 🎉</p>';
+        showNotification('🎉 Gratulacje! 🎉', 'Świetnie! Ułożyłeś wszystkie 9 części puzzle mapy!');
+    }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const app = new Todo({
-    listEl: document.getElementById('list'),
-    searchInput: document.getElementById('searchInput'),
-    clearSearchBtn: document.getElementById('clearSearch'),
-    addForm: document.getElementById('addForm'),
-    addErrorEl: document.getElementById('addError'),
-    taskTextInput: document.getElementById('taskText'),
-    taskDueInput: document.getElementById('taskDue'),
-  });
-
-
+// ================================
+// ON LOAD
+// ================================
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    updatePermissionsStatus();
 });
