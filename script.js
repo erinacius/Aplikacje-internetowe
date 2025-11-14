@@ -1,14 +1,11 @@
-// ================================
-// GLOBAL VARIABLES
-// ================================
+
 let map = null;
 let userLocation = null;
 let userMarker = null;
 let currentMapImage = null;
-// Puzzle board references (made global so handlers can access)
 let puzzleBoard = null;
 let puzzlePiecesContainer = null;
-const piecesPerRow = 3; // 3x3 puzzle -> 9 pieces
+const piecesPerRow = 3; 
 
 let puzzleState = {
     started: false,
@@ -16,9 +13,7 @@ let puzzleState = {
     draggedPiece: null
 };
 
-// ================================
-// INIT LEAFLET MAP
-// ================================
+
 function initMap() {
     map = L.map('mapContainer').setView([52.2297, 21.0122], 13);
 
@@ -32,9 +27,7 @@ function initMap() {
     });
 }
 
-// ================================
-// PERMISSIONS: LOCATION
-// ================================
+
 document.getElementById('btnRequestLocation').addEventListener('click', () => {
     if (!navigator.geolocation) return alert('Geolocation API nie jest obsługiwane.');
 
@@ -46,7 +39,6 @@ document.getElementById('btnRequestLocation').addEventListener('click', () => {
                 accuracy: pos.coords.accuracy
             };
             updatePermissionsStatus();
-            // Do not add marker here — this button only requests/stores location permission
             showNotification('Zgoda pobrana', 'Lokalizacja została pobrana i zapisana. Kliknij "Moja lokalizacja" aby ją pokazać na mapie.');
         },
         (err) => alert('Błąd pobierania lokalizacji: ' + err.message)
@@ -60,9 +52,7 @@ function addUserMarker() {
     map.setView([userLocation.lat, userLocation.lon], 15);
 }
 
-// ================================
-// PERMISSIONS: NOTIFICATIONS
-// ================================
+
 document.getElementById('btnRequestNotifications').addEventListener('click', () => {
     if (!('Notification' in window)) return alert('Powiadomienia nie są obsługiwane.');
 
@@ -102,11 +92,8 @@ function showNotification(title, body) {
     }
 }
 
-// ================================
-// BUTTON: MY LOCATION (GOOGLE MAPS)
-// ================================
+
 document.getElementById('btnMyLocation').addEventListener('click', () => {
-    // If location was already requested and saved, just show the marker
     if (userLocation) {
         addUserMarker();
         showNotification('Moja lokalizacja', `Wyświetlam zapisaną pozycję: ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}`);
@@ -116,7 +103,6 @@ document.getElementById('btnMyLocation').addEventListener('click', () => {
     if (!navigator.geolocation) return alert('Brak wsparcia dla geolokalizacji.');
 
     navigator.geolocation.getCurrentPosition((pos) => {
-        // Save location and show on Leaflet map
         userLocation = {
             lat: pos.coords.latitude,
             lon: pos.coords.longitude,
@@ -130,22 +116,12 @@ document.getElementById('btnMyLocation').addEventListener('click', () => {
     });
 });
 
-function showGoogleMap(lat, lon) {
-    // Google Maps removed — function left empty to avoid errors if referenced elsewhere
-}
 
-// btnCloseGoogleMaps removed along with Google Maps UI
-
-// ================================
-// RESET MAP
-// ================================
 document.getElementById('btnResetMap').addEventListener('click', () => {
     map.setView([52.2297, 21.0122], 13);
 });
 
-// ================================
-// EXPORT MAP + START PUZZLE
-// ================================
+
 document.getElementById('btnExportMap').addEventListener('click', () => exportMap());
 async function exportMap() {
     const canvas = await html2canvas(document.getElementById('mapContainer'));
@@ -159,7 +135,6 @@ async function exportMap() {
     initPuzzle();
 }
 
-// Start puzzle by capturing current Leaflet map and creating 3x3 puzzle
 document.getElementById('btnStartPuzzle').addEventListener('click', async () => {
     try {
         const canvas = await html2canvas(document.getElementById('mapContainer'), {useCORS: true});
@@ -171,15 +146,12 @@ document.getElementById('btnStartPuzzle').addEventListener('click', async () => 
     }
 });
 
-// ================================
-// PUZZLE ENGINE
-// ================================
+
 function initPuzzle() {
     if (!currentMapImage) return alert('Najpierw pobierz mapę!');
 
     puzzleState.pieces = [];
 
-    // Use global board/pieces references
     puzzleBoard = document.getElementById('board');
     puzzlePiecesContainer = document.getElementById('pieces');
     puzzleBoard.innerHTML = '';
@@ -187,15 +159,12 @@ function initPuzzle() {
 
     let img = new Image();
     img.onload = () => {
-        // create 3x3 puzzle with precise slicing so we don't crop edges
         const rows = piecesPerRow;
         const cols = piecesPerRow;
 
-        // floating cell sizes
         const cellWf = img.width / cols;
         const cellHf = img.height / rows;
 
-        // compute integer widths/heights per column/row so sum matches image dimensions
         const colWidths = new Array(cols);
         const rowHeights = new Array(rows);
         for (let c = 0; c < cols; c++) {
@@ -205,7 +174,6 @@ function initPuzzle() {
             rowHeights[r] = Math.round((r + 1) * cellHf) - Math.round(r * cellHf);
         }
 
-        // set board size to exact image size so drops align
         puzzleBoard.style.position = 'relative';
         puzzleBoard.style.width = img.width + 'px';
         puzzleBoard.style.height = img.height + 'px';
@@ -243,18 +211,14 @@ function initPuzzle() {
             }
         }
 
-        // shuffle
         temp.sort(() => Math.random() - 0.5);
 
-        // place pieces in pieces container (no absolute positioning needed, flexbox will handle layout)
         temp.forEach((p) => {
-            // remove inline positioning since CSS flexbox will handle layout
             p.element.style.position = 'relative';
             puzzlePiecesContainer.appendChild(p.element);
             puzzleState.pieces.push(p);
         });
 
-        // make board accept drops, pass column widths and row heights for precise snapping
         puzzleBoard.ondragover = (e) => e.preventDefault();
         puzzleBoard.ondrop = (e) => handleDrop(e, colWidths, rowHeights);
     };
@@ -269,7 +233,6 @@ function handleDrop(e, colWidths, rowHeights) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // determine column by accumulating widths
     let cum = 0;
     let col = -1;
     for (let c = 0; c < colWidths.length; c++) {
@@ -277,7 +240,6 @@ function handleDrop(e, colWidths, rowHeights) {
         if (x < cum) { col = c; break; }
     }
 
-    // determine row by accumulating heights
     cum = 0;
     let row = -1;
     for (let r = 0; r < rowHeights.length; r++) {
@@ -290,42 +252,33 @@ function handleDrop(e, colWidths, rowHeights) {
         return;
     }
 
-    // compute position by summing previous widths/heights
     const left = colWidths.slice(0, col).reduce((a, b) => a + b, 0);
     const top = rowHeights.slice(0, row).reduce((a, b) => a + b, 0);
 
-    // find if another piece is sitting at target cell
     const existing = puzzleState.pieces.find(px => px.currentRow === row && px.currentCol === col);
 
-    // remember previous position of dragged piece
     const prevRow = p.currentRow;
     const prevCol = p.currentCol;
 
-    // place dragged piece to target
     p.currentRow = row;
     p.currentCol = col;
     p.placed = true;
     p.element.style.position = 'absolute';
     p.element.style.left = left + 'px';
     p.element.style.top = top + 'px';
-    // ensure draggable stays enabled so user can move/swap later
     p.element.draggable = true;
     puzzleBoard.appendChild(p.element);
 
     if (existing && existing !== p) {
-        // swap: move existing piece to dragged piece previous spot (or back to pieces container if none)
         if (prevRow === null || prevCol === null) {
-            // move existing back to pieces container
             existing.currentRow = null;
             existing.currentCol = null;
             existing.placed = false;
-            // reset positioning and append to pieces container (flexbox will handle layout)
             existing.element.style.position = 'relative';
             existing.element.style.left = '';
             existing.element.style.top = '';
             puzzlePiecesContainer.appendChild(existing.element);
         } else {
-            // move existing to previous position of dragged piece
             const prevLeft = colWidths.slice(0, prevCol).reduce((a, b) => a + b, 0);
             const prevTop = rowHeights.slice(0, prevRow).reduce((a, b) => a + b, 0);
             existing.currentRow = prevRow;
@@ -342,16 +295,12 @@ function handleDrop(e, colWidths, rowHeights) {
 }
 
 function checkPuzzleCompletion() {
-    // for 3x3 puzzle ensure all 9 pieces are placed
     if (puzzleState.pieces.length > 0 && puzzleState.pieces.every(p => p.placed)) {
         document.getElementById('puzzleStatus').innerHTML = '<p style="color: #27ae60; font-weight: bold; font-size:18px;">🎉 Gratulacje! Ułożyłeś puzzle! 🎉</p>';
-        showNotification('🎉 Gratulacje! 🎉', 'Świetnie! Ułożyłeś wszystkie 9 części puzzle mapy!');
+        showNotification('Gratulacje!', 'Ukończyłeś puzzle!');
     }
 }
 
-// ================================
-// ON LOAD
-// ================================
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     updatePermissionsStatus();
