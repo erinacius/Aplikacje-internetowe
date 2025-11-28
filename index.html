@@ -1,166 +1,129 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <title>AI1 – LAB B – dj53739</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="data:," />
-  <!-- przy stylach chata duzo uzywalem bo nie chcialo mi sie wypisywac wszystkich wartosci -->
-  <style>
-    body {
-        font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-        margin: 20px;
-        background: url('kot.jpg') no-repeat center center fixed;
-        background-size: cover;
-        color: #222;
-    }
-
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(255, 255, 255, 0.3);
-    z-index: 0;
-    pointer-events: none;
-  }
-  :root { --gap: 12px; --radius: 10px; }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; color:#222; }
-    .container {
-      max-width: 760px;
-      margin: 0 auto;
-      background: rgba(255,255,255,0.88);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-      position: relative;
-      z-index: 1;
-    }
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  h2 { margin: 0 0 12px; font-size: 16px; font-weight: normal; color: #444; }
-    .note { color:#666; margin-bottom: 18px; }
-
-    .search {
-      display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
-    }
-    .search input[type="text"] {
-      flex: 1; padding: 10px 12px; border:1px solid #ddd; border-radius: var(--radius);
-    }
-  .list { background:#fff; border:1px solid #eee; border-radius: var(--radius); padding: 4px; }
-    .empty { padding: 18px; color:#777; }
-
-    .item {
-      display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
-      padding: 10px; border-bottom:1px solid #f0f0f0;
-    }
-    .item:last-child { border-bottom: 0; }
-    .text { cursor: text; line-height: 1.4; }
-    .due { font-size: 12px; color:#555; white-space: nowrap; }
-    .danger { color: #b00020; }
-    .btn {
-      border:1px solid #ddd; background:#fff; padding: 6px 10px; border-radius: 8px; cursor: pointer;
-    }
-    .btn:hover { background:#f6f6f6; }
-
-    .editor { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; width: 100%; }
-    .editor .inputs { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-    .editor input[type="text"], .editor input[type="datetime-local"] {
-      padding: 8px 10px; border:1px solid #ddd; border-radius: 8px; width: 100%;
-    }
-
-    mark { padding: 0 2px; border-radius: 3px; background: #ffea7f; }
-
-    .adder {
-      margin-top: 12px; display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
-      background:#fff; border:1px solid #eee; border-radius: var(--radius); padding: 10px;
-    }
-    .adder input[type="text"], .adder input[type="datetime-local"] {
-      padding: 10px 12px; border:1px solid #ddd; border-radius: 8px;
-    }
-    .adder .btn-primary { background:#111; color:#fff; border-color:#111; }
-    .adder .btn-primary:hover { background:#000; }
-    .error { color:#b00020; font-size: 13px; margin-top: 6px; }
-    footer { margin-top: 24px; color:#888; font-size: 12px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prognoza Pogody - REST API Client</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Lista TODO</h1>
-    <h2>W każdym projekcie będzie inne zdjecie kota</h2>
+    <div class="container">
+        <div id="mainContent">
+        <div class="search-card">
+            <h1>Prognozator Pogody</h1>
+            <p class="subtitle">REST API Client - Lab D</p>
+            
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="cityInput" 
+                    placeholder="Wprowadź nazwę miasta..."
+                    class="city-input"
+                >
+                <button id="searchBtn" class="search-btn">Pogoda</button>
+            </div>
 
-    <div class="search">
-      <input id="searchInput" type="text" placeholder="Szukaj (min. 2 znaki)..." autocomplete="off" />
-      <button id="clearSearch" class="btn" title="Wyczyść wyszukiwanie">Wyczyść</button>
+            <div style="margin-top: 1rem;">
+                <button id="toggleContent" class="toggle-btn-large">Zobacz koty</button>
+            </div>
+
+            <div class="options-section">
+                <div class="options-title">Dodatkowe opcje</div>
+                <div class="options-grid">
+                    <div class="option-item">
+                        <input type="checkbox" id="showExtraInfo" checked>
+                        <label for="showExtraInfo">Dodatkowe informacje</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="showSunTimes" checked>
+                        <label for="showSunTimes">Wschód/zachód słońca</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="showFullDetails" checked>
+                        <label for="showFullDetails">Pełne szczegóły</label>
+                    </div>
+                    <div class="unit-selector">
+                        <label for="unitSelect">Jednostki:</label>
+                        <select id="unitSelect">
+                            <option value="metric" selected>Metryczne (°C)</option>
+                            <option value="imperial">Imperialne (°F)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error" class="error hidden"></div>
+            <div id="loading" class="loading hidden">Ładowanie danych pogodowych...</div>
+        </div>
+
+        <div id="currentWeather" class="weather-card hidden">
+            <h2>Aktualna pogoda - <span id="cityName"></span></h2>
+            
+            <div class="current-weather-content">
+                <div class="weather-main">
+                    <img id="weatherIcon" src="" alt="Weather icon" class="weather-icon-large">
+                    <div class="temperature-box">
+                        <div id="temperature" class="temperature"></div>
+                        <div id="description" class="description"></div>
+                    </div>
+                </div>
+
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                        </svg>
+                        <div>
+                            <div class="detail-label">Wilgotność</div>
+                            <div id="humidity" class="detail-value"></div>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                        </svg>
+                        <div>
+                            <div class="detail-label">Wiatr</div>
+                            <div id="wind" class="detail-value"></div>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                        <div>
+                            <div class="detail-label">Ciśnienie</div>
+                            <div id="pressure" class="detail-value"></div>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <div>
+                            <div class="detail-label">Widoczność</div>
+                            <div id="visibility" class="detail-value"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="extraInfo" class="extra-info hidden"></div>
+        </div>
+
+        <div id="forecast" class="weather-card hidden">
+            <h2>Prognoza na 5 dni</h2>
+            <div id="forecastList" class="forecast-grid"></div>
+        </div>
+        </div>
     </div>
 
-    <div id="list" class="list" aria-live="polite"></div>
-
-    <form id="addForm" class="adder">
-      <input id="taskText" type="text" placeholder="Nowe zadanie (3–255 znaków)" maxlength="255" />
-      <input id="taskDue" type="datetime-local" />
-      <button class="btn btn-primary" type="submit">Dodaj</button>
-    </form>
-    <div id="addError" class="error" aria-live="polite"></div>
-
-    <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
-      <button id="dumpStorageBtn" class="btn" type="button">Pokaż LocalStorage</button>
+    <div id="backButton" class="back-button hidden">
+        <button id="showContent" class="toggle-btn-large">Pokaż interfejs</button>
     </div>
-    <pre id="storageDump" style="margin-top:8px; padding:10px; background:#f7f7f7; border:1px solid #eee; border-radius:6px; max-height:240px; overflow:auto; white-space:pre-wrap;"></pre>
 
-    <footer>AI1 – LAB B</footer>
-  </div>
-
-  <script src="script.js"></script>
-  <script>
-    (function(){
-      const dumpBtn = document.getElementById('dumpStorageBtn');
-      const copyBtn = document.getElementById('copyStorageBtn');
-      const out = document.getElementById('storageDump');
-      const keys = [
-        'ai1.labB.todo.v1', 
-        'todo_tasks_v1',
-        'ai1.labB.todo',
-      ];
-
-      function findKey() {
-        for (const k of keys) if (localStorage.getItem(k) !== null) return k;
-        for (let i=0;i<localStorage.length;i++){
-          const k = localStorage.key(i);
-          const v = localStorage.getItem(k);
-          if (v && (v.trim().startsWith('{') || v.trim().startsWith('['))) return k;
-        }
-        return null;
-      }
-
-      function pretty(k){
-        if (!k) return 'Brak klucza LocalStorage (nie znaleziono).';
-        try {
-          const raw = localStorage.getItem(k);
-          const parsed = JSON.parse(raw);
-          return `Klucz: ${k}\n\n` + JSON.stringify(parsed, null, 2);
-        } catch (e) {
-          return `Klucz: ${k}\n\n` + (localStorage.getItem(k) || '(puste)');
-        }
-      }
-
-      dumpBtn?.addEventListener('click', () => {
-        const k = findKey();
-        out.textContent = pretty(k);
-      });
-
-      copyBtn?.addEventListener('click', () => {
-        const k = findKey();
-        if (!k) return alert('Nie znaleziono odpowiedniego klucza w localStorage.');
-        try {
-          const raw = localStorage.getItem(k) || '';
-          navigator.clipboard.writeText(raw).then(()=> alert('Skopiowano JSON do schowka'))
-            .catch(()=> alert('Kopiowanie nie powiodło się.'));
-        } catch (e) {
-          alert('Błąd podczas kopiowania.');
-        }
-      });
-    })();
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>
