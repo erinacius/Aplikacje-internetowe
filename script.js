@@ -58,7 +58,7 @@ async function handleSearch() {
         
     } catch (error) {
         hideLoading();
-        showError('Brak miasta lub błąd sieci');
+        showError('Brak miasta lub błąd sieci   ');
         console.error('Error:', error);
     }
 }
