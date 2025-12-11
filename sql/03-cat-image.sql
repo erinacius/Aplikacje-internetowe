@@ -1,0 +1,1 @@
+ALTER TABLE cat ADD COLUMN image TEXT;

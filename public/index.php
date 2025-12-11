@@ -38,6 +38,36 @@ switch ($action) {
         $controller = new \App\Controller\PostController();
         $view = $controller->deleteAction($_REQUEST['id'], $router);
         break;
+
+    case 'cat-index':
+        $controller = new \App\Controller\CatController();
+        $view = $controller->indexAction($templating, $router);
+        break;
+    case 'cat-create':
+        $controller = new \App\Controller\CatController();
+        $view = $controller->createAction($templating, $router);
+        break;
+    case 'cat-show':
+        if (! $_REQUEST['id']) {
+            break;
+        }
+        $controller = new \App\Controller\CatController();
+        $view = $controller->showAction($templating, $router);
+        break;
+    case 'cat-edit':
+        if (! $_REQUEST['id']) {
+            break;
+        }
+        $controller = new \App\Controller\CatController();
+        $view = $controller->editAction($templating, $router);
+        break;
+    case 'cat-delete':
+        if (! $_REQUEST['id']) {
+            break;
+        }
+        $controller = new \App\Controller\CatController();
+        $view = $controller->deleteAction($router);
+        break;
     case 'info':
         $controller = new \App\Controller\InfoController();
         $view = $controller->infoAction();
